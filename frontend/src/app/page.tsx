@@ -1,4 +1,4 @@
-import TicketDashboard from "@/components/TicketDashboard";
+import TicketDashboard from "@/components/tickets/TicketDashboard";
 
 export default function Home() {
   return (

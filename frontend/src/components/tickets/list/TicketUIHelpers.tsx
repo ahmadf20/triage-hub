@@ -1,4 +1,3 @@
-import { Ticket } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
@@ -9,7 +8,6 @@ import {
   Frown,
   Meh,
 } from "lucide-react";
-import React from "react";
 
 export const getUrgencyConfig = (urgency?: string) => {
   switch (urgency) {

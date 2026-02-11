@@ -109,8 +109,10 @@ A full-stack application that intelligently ingests, triages, and drafts respons
 
 - `POST /tickets`: Create a ticket.
   - Body: `{ "content": "..." (min 10 chars), "customerEmail": "..." (email format) }`
-- `GET /tickets`: List tickets.
-  - Query: `?status=PENDING&urgency=HIGH`
+- `GET /tickets`: List tickets with pagination and filtering.
+  - Query: `?status=PENDING&urgency=HIGH&page=1&limit=10&sortBy=createdAt&sortOrder=desc`
+- `GET /tickets/:id`: Get a single ticket by ID.
+  - Returns: Ticket object or 404 if not found
 - `PATCH /tickets/:id`: Update ticket.
   - Body: `{ "status": "RESOLVED" | "FAILED", "aiDraft": "..." }`
 
@@ -124,6 +126,24 @@ The `backend/scripts` directory contains helper scripts for development:
   ```
 - `migrate.js`: Wrapper for Prisma migrations.
 - `test_*.js`: Various API and validation test scripts.
+
+## Frontend Architecture
+
+The dashboard uses a component-based architecture with **self-contained data fetching**:
+
+### Key Design Patterns
+
+- **URL as Single Source of Truth**: Selected ticket ID and filters are stored in URL query parameters
+- **Independent Data Fetching**: Both list and detail components manage their own React Query hooks
+- **Real-time Updates**: Components auto-refresh every 5 seconds to show latest AI results
+- **Optimistic Cache Invalidation**: Updates trigger refetches of both list and detail views
+
+This architecture enables:
+
+- Direct URL access to specific tickets (shareable links)
+- Browser back/forward navigation
+- Always-fresh data in detail view
+- Detail view works even if ticket isn't on current list page
 
 ## Project Structure
 

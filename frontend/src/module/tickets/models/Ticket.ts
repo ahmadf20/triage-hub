@@ -1,4 +1,4 @@
-export interface Ticket {
+export type Ticket = {
   id: string;
   content: string;
   customerEmail?: string;
@@ -9,4 +9,4 @@ export interface Ticket {
   aiDraft?: string;
   createdAt: string;
   updatedAt: string;
-}
+};

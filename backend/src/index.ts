@@ -60,20 +60,67 @@ app.post("/tickets", async (req, res) => {
 });
 
 app.get("/tickets", async (req, res) => {
-  const { status, urgency } = req.query;
+  const {
+    status,
+    urgency,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = req.query;
+
+  const pageNum = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const skip = (pageNum - 1) * limitNum;
 
   const where: any = {};
   if (status && status !== "ALL") where.status = status;
   if (urgency && urgency !== "ALL") where.urgency = urgency;
 
+  const allowedSortFields = ["createdAt", "urgency", "sentiment", "status"];
+  const sortField = allowedSortFields.includes(sortBy as string)
+    ? (sortBy as string)
+    : "createdAt";
+  const order = sortOrder === "asc" ? "asc" : "desc";
+
   try {
-    const tickets = await prisma.ticket.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        orderBy: { [sortField]: order },
+        skip,
+        take: limitNum,
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    res.json({
+      tickets,
+      total,
+      pages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
     });
-    res.json(tickets);
   } catch (error) {
     console.error("Error fetching tickets:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/tickets/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: "Ticket not found" });
+    }
+
+    res.json(ticket);
+  } catch (error) {
+    console.error("Error fetching ticket:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

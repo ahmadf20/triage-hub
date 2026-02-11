@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.git
+coverage
+worker.log
+worker_debug.log
+worker_final.log
+*.log

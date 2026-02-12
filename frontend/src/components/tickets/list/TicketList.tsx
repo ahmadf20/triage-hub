@@ -35,7 +35,7 @@ export function TicketList({
     status: statusFilter,
     urgency: urgencyFilter,
     page,
-    limit: 10,
+    limit: 20,
     sortBy,
     sortOrder,
   });

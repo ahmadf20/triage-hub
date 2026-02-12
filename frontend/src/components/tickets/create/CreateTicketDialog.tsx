@@ -29,6 +29,11 @@ export function CreateTicketDialog() {
       return;
     }
 
+    if (content.length < 10) {
+      toast.error("Please enter at least 10 characters");
+      return;
+    }
+
     createMutation.mutate(
       { content, customerEmail: email },
       {

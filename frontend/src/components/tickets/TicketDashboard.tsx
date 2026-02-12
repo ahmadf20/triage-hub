@@ -74,6 +74,7 @@ export default function TicketDashboard() {
         />
 
         <TicketDetailPanel
+          key={selectedTicketId}
           selectedTicketId={selectedTicketId}
           onClose={() => updateUrl({ ticketId: null })}
         />

@@ -1,13 +1,15 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { Queue } from "bullmq";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { Queue, QueueEvents } from "bullmq";
 import { z } from "zod";
 import prisma from "./db";
 
 const createTicketSchema = z.object({
   content: z.string().min(10, "Content must be at least 10 characters long"),
-  customerEmail: z.string().email().optional().or(z.literal("")),
+  customerEmail: z.email().optional().or(z.literal("")),
 });
 
 const updateTicketSchema = z.object({
@@ -19,6 +21,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*", // Allow all origins for simplicity, restrict in production
+    methods: ["GET", "POST", "PATCH"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log(`Client connected: ${socket.id}`);
+  socket.on("disconnect", () => {
+    console.log(`Client disconnected: ${socket.id}`);
+  });
+});
+
 // Redis connection config
 const connection = process.env.REDIS_URL
   ? { url: process.env.REDIS_URL } // Use URL if provided
@@ -28,6 +45,33 @@ const connection = process.env.REDIS_URL
     };
 
 const ticketQueue = new Queue("ticket-triage", { connection });
+const queueEvents = new QueueEvents("ticket-triage", { connection });
+
+queueEvents.on("completed", ({ jobId, returnvalue }) => {
+  console.log(`Job ${jobId} completed. Emitting ticket:update`);
+  const result = returnvalue as any;
+  if (result?.ticketId) {
+    io.emit("ticket:update", {
+      id: result.ticketId,
+      type: "processed",
+      resolution: result.resolution, // Optional if we return more data
+    });
+  }
+});
+
+queueEvents.on("failed", async ({ jobId, failedReason }) => {
+  console.log(`Job ${jobId} failed: ${failedReason}`);
+
+  const job = await ticketQueue.getJob(jobId);
+
+  if (job?.data?.ticketId) {
+    io.emit("ticket:update", {
+      id: job.data.ticketId,
+      type: "failed",
+      reason: failedReason,
+    });
+  }
+});
 
 app.post("/tickets", async (req, res) => {
   try {
@@ -49,11 +93,16 @@ app.post("/tickets", async (req, res) => {
       content,
     });
 
+    io.emit("ticket:update", { id: ticket.id, type: "created" });
+
     res.status(201).json(ticket);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: (error as any).errors });
+      return res
+        .status(400)
+        .json({ error: JSON.parse(error.message)?.[0]?.message });
     }
+
     console.error("Error creating ticket:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -135,6 +184,9 @@ app.patch("/tickets/:id", async (req, res) => {
       where: { id },
       data: validatedData,
     });
+
+    io.emit("ticket:update", { id: ticket.id, type: "updated" });
+
     res.json(ticket);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -145,7 +197,8 @@ app.patch("/tickets/:id", async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+const port = process.env.PORT || 3001;
+
+httpServer.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

@@ -35,6 +35,7 @@ const worker = new Worker(
       });
 
       console.log(`Ticket ${ticketId} processed successfully.`);
+      return { ticketId };
     } catch (error) {
       console.error(`Error processing ticket ${ticketId}:`, error);
       throw error;

@@ -7,6 +7,5 @@ export function useTicket(id: string | null) {
     queryKey: ["ticket", id],
     queryFn: () => getTicketById({ id: id ?? "" }),
     enabled: Boolean(id),
-    refetchInterval: 5000,
   });
 }

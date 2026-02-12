@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-import "dotenv/config";
+const { GoogleGenAI } = require("@google/genai");
+require("dotenv").config();
 
 async function listModels() {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });

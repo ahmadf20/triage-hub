@@ -1,90 +1,62 @@
-"use client";
-
 import { useState } from "react";
 import { Ticket } from "@/module/tickets/models/Ticket";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, ArrowRight } from "lucide-react";
+import { User, ArrowRight, AlertCircle } from "lucide-react";
 import {
   getUrgencyConfig,
   getStatusBadge,
   getSentimentIcon,
 } from "../list/TicketUIHelpers";
+import { useTicket } from "@/module/tickets/hooks/useTicket";
+import { useUpdateTicket } from "@/module/tickets/hooks/useUpdateTicket";
+import { toast } from "sonner";
 
 type TicketDetailProps = {
-  ticket: Ticket | null;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdate: (status: Ticket["status"], draft: string) => void;
-  isUpdating: boolean;
-  isSidebar?: boolean;
-  isLoading?: boolean;
+  ticketId: string | null;
+  onClose: () => void;
 };
 
-export function TicketDetail({
-  ticket,
-  isOpen,
-  onOpenChange,
-  onUpdate,
-  isUpdating,
-  isSidebar = false,
-  isLoading = false,
-}: TicketDetailProps) {
+export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
+  const { data: ticket, isLoading, isError } = useTicket(ticketId);
+
   const [draftEdit, setDraftEdit] = useState("");
-  const [prevTicketId, setPrevTicketId] = useState<string | null>(null);
-
-  if (ticket && ticket.id !== prevTicketId) {
-    setPrevTicketId(ticket.id);
-    setDraftEdit(ticket.aiDraft || "");
+  if (ticket?.aiDraft && ticket.aiDraft !== draftEdit) {
+    setDraftEdit(ticket.aiDraft);
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col h-full bg-white">
-        <div className="p-5 border-b border-gray-200">
-          <div className="space-y-3">
-            <Skeleton className="h-6 w-48" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          </div>
-        </div>
-        <div className="grow p-5 space-y-6">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-28" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-28" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-48 w-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!ticket) return null;
+  const updateMutation = useUpdateTicket();
 
   const handleUpdate = (status: Ticket["status"]) => {
-    onUpdate(status, draftEdit);
+    if (!ticketId) return;
+
+    updateMutation.mutate(
+      {
+        id: ticketId,
+        status,
+        aiDraft: draftEdit,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Ticket updated successfully!");
+        },
+        onError: () => {
+          toast.error("Failed to update ticket");
+        },
+      },
+    );
   };
 
-  const Content = (
+  if (isLoading) return <LoadingSkeleton />;
+  if (isError) return <ErrorState onClose={onClose} />;
+  if (!ticket) return null;
+
+  const isUpdating = updateMutation.isPending;
+
+  return (
     <div className="flex flex-col h-full bg-white">
       <div className="p-5 border-b border-gray-200">
         <div className="space-y-2">
@@ -212,14 +184,59 @@ export function TicketDetail({
       </div>
     </div>
   );
+}
 
-  if (isSidebar) return Content;
-
+function LoadingSkeleton() {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-        {Content}
-      </DialogContent>
-    </Dialog>
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-5 border-b border-gray-200">
+        <div className="space-y-3">
+          <Skeleton className="h-6 w-48" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+      </div>
+      <div className="grow p-5 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+        <div className="flex gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-6 gap-4">
+      <AlertCircle className="h-12 w-12 text-red-600" />
+      <div className="text-center">
+        <p className="text-base font-semibold text-gray-900">
+          Failed to load ticket
+        </p>
+        <p className="text-sm text-gray-600 mt-1">
+          This ticket may not exist or there was a connection error.
+        </p>
+      </div>
+      <Button variant="outline" onClick={onClose}>
+        Back to list
+      </Button>
+    </div>
   );
 }

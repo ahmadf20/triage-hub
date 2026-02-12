@@ -44,6 +44,7 @@ export function TicketFilters({
             <SelectItem value="PENDING">Pending</SelectItem>
             <SelectItem value="PROCESSED">Processed</SelectItem>
             <SelectItem value="RESOLVED">Resolved</SelectItem>
+            <SelectItem value="FAILED">Failed</SelectItem>
           </SelectContent>
         </Select>
       </div>

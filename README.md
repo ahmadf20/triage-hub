@@ -64,11 +64,11 @@ A full-stack application that intelligently ingests, triages, and drafts respons
     npm run dev
     ```
 
-    _Open a second terminal for the worker:_
+    _Open a second terminal for the worker (with hot-reload):_
 
     ```bash
     cd backend
-    npm run worker
+    npm run dev:worker
     ```
 
 4.  **Start Frontend** (with hot-reload):
@@ -80,8 +80,8 @@ A full-stack application that intelligently ingests, triages, and drafts respons
     ```
 
 5.  **Access the App**:
-    - Dashboard: [http://localhost:3001](http://localhost:3001)
-    - Backend API: [http://localhost:3000](http://localhost:3000)
+    - Dashboard: [http://localhost:3000](http://localhost:3000)
+    - Backend API: [http://localhost:3001](http://localhost:3001)
 
 ## Production
 
@@ -102,8 +102,8 @@ A full-stack application that intelligently ingests, triages, and drafts respons
     _Note: Both backend and frontend will run in production mode. Changes require a rebuild._
 
 3.  **Access the App**:
-    - Dashboard: [http://localhost:3001](http://localhost:3001)
-    - Backend API: [http://localhost:3000](http://localhost:3000)
+    - Dashboard: [http://localhost:3000](http://localhost:3000)
+    - Backend API: [http://localhost:3001](http://localhost:3001)
 
 ## API Endpoints
 
@@ -126,6 +126,19 @@ The `backend/scripts` directory contains helper scripts for development:
   ```
 - `migrate.js`: Wrapper for Prisma migrations.
 - `test_*.js`: Various API and validation test scripts.
+
+## NPM Scripts
+
+Detailed explanation of the available scripts in `backend/package.json`:
+
+- `npm run dev`: Starts the backend API in development mode with hot-reloading (nodemon).
+- `npm run dev:worker`: Starts the background worker in development mode with hot-reloading.
+- `npm run build`: Generates Prisma client and compiles TypeScript to JavaScript for production.
+- `npm run start`: Runs the compiled production build (`dist/index.js`).
+- `npm run start:prod`: Runs production migrations and then starts the server.
+- `npm run start:worker`: Runs the compiled production worker (`dist/worker.js`).
+- `npm run worker`: Runs the worker from source using `ts-node` (good for ad-hoc usage).
+- `npm run migrate`: Runs Prisma migrations to update the database schema.
 
 ## Frontend Architecture
 

@@ -1,6 +1,14 @@
 import { GoogleGenAI, Schema, Type } from "@google/genai";
+import { z } from "zod";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const aiResponseSchema = z.object({
+  category: z.enum(["BILLING", "TECHNICAL", "FEATURE_REQUEST"]),
+  sentiment: z.number().min(1).max(10),
+  urgency: z.enum(["HIGH", "MEDIUM", "LOW"]),
+  draft: z.string(),
+});
 
 const schema: Schema = {
   type: Type.OBJECT,
@@ -40,8 +48,7 @@ export async function triageTicket(content: string) {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-
+      model: "gemini-3-flash-preview",
       contents: [
         {
           role: "user",
@@ -59,16 +66,11 @@ export async function triageTicket(content: string) {
                   - 8-10: Happy, grateful, praising.
                 - Draft: A helpful, empathetic, and professional response draft.
 
-                Examples:
-                Input: "I love this tool! It saved me so much time. Just wondering if you have a dark mode?"
-                Output: {"category": "FEATURE_REQUEST", "urgency": "LOW", "sentiment": 9, "draft": "..."}
+                **Handling Edge Cases & Ambiguity:**
+                1. **Spam/Gibberish/Unclear**: If the input is nonsense, spam, or too vague to classify, set Category="TECHNICAL", Urgency="LOW", and draft a polite response asking for clarification.
+                2. **Mixed Intent**: If the ticket covers multiple topics (e.g. bug + billing), prioritize the **highest urgency** issue. (e.g. Blocking Bug > Minor Refund).
+                3. **Safety**: Do not generate harmful content. If the user is abusive, remain professional and neutral.
 
-                Input: "I can't log in and I have a presentation in 10 minutes! Fix this NOW!"
-                Output: {"category": "TECHNICAL", "urgency": "HIGH", "sentiment": 1, "draft": "..."}
-
-                Input: "How do I update my credit card?"
-                Output: {"category": "BILLING", "urgency": "LOW", "sentiment": 6, "draft": "..."}
-                      
                 Analyze the following customer ticket:\n\n"${content}"`,
             },
           ],
@@ -81,9 +83,14 @@ export async function triageTicket(content: string) {
     });
 
     console.log("AI Response:", response.text);
-    return JSON.parse(response.text || "{}");
+
+    const rawJson = JSON.parse(response.text || "{}");
+    return aiResponseSchema.parse(rawJson);
   } catch (error: any) {
-    console.error("Error calling Gemini API:", JSON.stringify(error, null, 2));
+    console.error(
+      "Error generating AI response:",
+      JSON.stringify(error, null, 2),
+    );
     throw error;
   }
 }

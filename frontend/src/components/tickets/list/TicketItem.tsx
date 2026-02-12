@@ -25,11 +25,13 @@ export function TicketItem({ ticket, isSelected, onClick }: TicketItemProps) {
           </span>
           {getStatusBadge(ticket.status)}
         </div>
-        <div
-          className={`px-2 py-0.5 text-xs font-medium border rounded-full ${getUrgencyConfig(ticket.urgency).color}`}
-        >
-          {ticket.urgency || "PENDING"}
-        </div>
+        {ticket.urgency && (
+          <div
+            className={`px-2 py-0.5 text-xs font-medium border rounded-full ${getUrgencyConfig(ticket.urgency).color}`}
+          >
+            {ticket.urgency}
+          </div>
+        )}
       </div>
       <p className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
         {ticket.content}

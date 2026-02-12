@@ -62,7 +62,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-semibold text-gray-900">
-              {ticket.category?.replace(/_/g, " ") || "Issue Details"}
+              {ticket.category?.replace(/_/g, " ") || "UNKNOWN"}
             </h3>
             {getStatusBadge(ticket.status)}
           </div>
@@ -96,7 +96,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
               className={`flex items-center gap-2 px-3 py-1.5 border w-fit text-xs font-medium rounded-md ${getUrgencyConfig(ticket.urgency).color}`}
             >
               {getUrgencyConfig(ticket.urgency).icon}
-              <span>{ticket.urgency || "Pending"}</span>
+              <span>{ticket.urgency || "NONE"}</span>
             </div>
           </div>
 
@@ -109,7 +109,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
               <span className="font-medium text-gray-700">
                 {ticket.sentiment !== null && ticket.sentiment !== undefined
                   ? `${ticket.sentiment}/10`
-                  : "Analyzing..."}
+                  : "NONE"}
               </span>
             </div>
           </div>

@@ -45,7 +45,7 @@ export const getStatusBadge = (status: string) => {
         </Badge>
       );
     case "FAILED":
-      return <Badge variant="destructive">Error</Badge>;
+      return <Badge variant="destructive">Failed</Badge>;
     default:
       return (
         <Badge variant="secondary" className="font-normal">

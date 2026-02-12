@@ -16,14 +16,14 @@ services:
     depends_on:
       - postgres
       - redis
-    command: >
-      sh -c "npx prisma migrate deploy &&
-             node dist/index.js"
+    command: npm run start:prod
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
       - "3000:3000"
     environment:
@@ -43,7 +43,7 @@ services:
     depends_on:
       - postgres
       - redis
-    command: node dist/worker.js
+    command: npm run start:worker
 
   postgres:
     image: postgres:15-alpine

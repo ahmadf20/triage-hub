@@ -35,19 +35,14 @@ A full-stack application that intelligently ingests, triages, and drafts respons
 
 **Best for**: Coding, debugging, and testing features with hot-reloading.
 
-1.  **Clone the repository** (if applicable).
-    - **Infrastructure** (Root): Copy `backend/.env.example` to `.env` (required for Docker Compose).
-      ```bash
-      cp backend/.env.example .env
-      ```
-    - **Backend**: Copy `backend/.env.example` to `backend/.env` and fill in your details:
-      ```bash
-      cp backend/.env.example backend/.env
-      ```
-    - **Frontend**: Copy `frontend/.env.example` to `frontend/.env.local`:
-      ```bash
-      cp frontend/.env.example frontend/.env.local
-      ```
+1.  **Configure Environment**:
+    Run the setup script to create `.env` files from examples:
+
+    ```bash
+    node scripts/setup-env.js
+    ```
+
+    Then, update `backend/.env` with your `GEMINI_API_KEY`.
 
 2.  **Start Infrastructure** (DB & Redis only):
 
@@ -88,11 +83,11 @@ A full-stack application that intelligently ingests, triages, and drafts respons
 **Best for**: Deployment simulation, stability, and running the full backend stack in isolated containers.
 
 1.  **Configure Environment**:
-    - **Infrastructure**: Copy `backend/.env.example` to `.env` in the root directory and ensure `POSTGRES_*` variables are set.
-      ```bash
-      cp backend/.env.example .env
-      ```
-    - **Application**: Ensure `backend/.env` is set up with your `GEMINI_API_KEY`.
+    Run the setup script to create `.env` files from examples:
+    ```bash
+    node scripts/setup-env.js
+    ```
+    Then, update `backend/.env` with your `GEMINI_API_KEY`.
 2.  **Run Full Stack** (Frontend + Backend + Worker + DB + Redis):
 
     ```bash

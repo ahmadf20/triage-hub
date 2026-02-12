@@ -4,23 +4,24 @@ A full-stack application that intelligently ingests, triages, and drafts respons
 
 ## Features
 
-- **Ticket Ingestion**: API endpoint to submit new support tickets (Validated with Zod).
-- **AI Triage**: Asynchronously analyzes tickets for:
+- **Ticket Ingestion**: API endpoint to submit new support tickets with optional customer email (validated with Zod).
+- **AI Triage**: Asynchronously analyzes tickets using Google Gemini for:
   - **Category** (Billing, Technical, Feature Request)
   - **Urgency** (High, Medium, Low)
-  - **Sentiment** (0-10 score)
-- **AI Response Drafting**: Automatically generates a polite, context-aware email draft.
-- **Robust Worker**: Handles AI rate limits with exponential backoff and marks tickets as `FAILED` after max retries.
-- **Ticket Dashboard**: Next.js frontend to view, filter, and manage tickets.
-- **Real-time Polls**: Dashboard auto-refreshes to show latest AI results.
+  - **Sentiment** (1-10 scale)
+  - **Draft Response**: Polite, context-aware email draft
+- **Robust Worker**: BullMQ worker with rate limiting (10 jobs/minute, 5 concurrent) and automatic failure handling.
+- **Ticket Dashboard**: Next.js frontend to view, filter, sort, and manage tickets with URL-based state.
+- **Real-time Updates**: WebSocket-based instant notifications and auto-refresh data via Socket.IO when tickets are processed or fail.
+- **Manual Override**: Edit ticket details (category, urgency, draft) directly in the UI, even for failed AI processing.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Shadcn/UI
-- **Backend**: Node.js, Express, TypeScript
+- **Frontend**: Next.js 14 (App Router), React Query, Tailwind CSS, Shadcn/UI, Socket.IO Client
+- **Backend**: Node.js, Express, TypeScript, Socket.IO Server
 - **Database**: PostgreSQL (via Docker)
 - **Queue**: BullMQ + Redis (via Docker)
-- **AI**: Google Gemini
+- **AI**: Google Gemini (gemini-3-flash-preview)
 - **Validation**: Zod
 - **Containerization**: Docker Compose
 
@@ -103,28 +104,26 @@ A full-stack application that intelligently ingests, triages, and drafts respons
 ## API Endpoints
 
 - `POST /tickets`: Create a ticket.
-  - Body: `{ "content": "..." (min 10 chars), "customerEmail": "..." (email format) }`
 - `GET /tickets`: List tickets with pagination and filtering.
-  - Query: `?status=PENDING&urgency=HIGH&page=1&limit=10&sortBy=createdAt&sortOrder=desc`
 - `GET /tickets/:id`: Get a single ticket by ID.
-  - Returns: Ticket object or 404 if not found
-- `PATCH /tickets/:id`: Update ticket.
-  - Body: `{ "status": "RESOLVED" | "FAILED", "aiDraft": "..." }`
+- `PATCH /tickets/:id`: Update ticket details.
 
 ## Utility Scripts
 
-The `backend/scripts` directory contains helper scripts for development:
+- **`scripts/setup-env.js`**: Automatically copies all `.env.example` files to their respective `.env` destinations.
 
-- `list_models.ts`: Lists available Gemini models for your API key.
   ```bash
-  cd backend && npx ts-node scripts/list_models.ts
+  node scripts/setup-env.js
   ```
-- `migrate.js`: Wrapper for Prisma migrations.
-- `test_*.js`: Various API and validation test scripts.
+
+- **`backend/scripts/list_models.js`**: Lists available Gemini models for your API key.
+  ```bash
+  cd backend && node scripts/list_models.js
+  ```
 
 ## NPM Scripts
 
-Detailed explanation of the available scripts in `backend/package.json`:
+Available scripts in `backend/package.json`:
 
 - `npm run dev`: Starts the backend API in development mode with hot-reloading (nodemon).
 - `npm run dev:worker`: Starts the background worker in development mode with hot-reloading.
@@ -135,28 +134,49 @@ Detailed explanation of the available scripts in `backend/package.json`:
 - `npm run worker`: Runs the worker from source using `ts-node` (good for ad-hoc usage).
 - `npm run migrate`: Runs Prisma migrations to update the database schema.
 
-## Frontend Architecture
+## Architecture
 
-The dashboard uses a component-based architecture with **self-contained data fetching**:
+### Frontend
 
-### Key Design Patterns
+- **Next.js 14** with App Router and TypeScript
+- **React Query**: Client-side state management and caching
+- **Socket.IO Client**: Real-time WebSocket connection for instant updates
+- **URL-based state**: Filters and selected ticket ID stored in query parameters
+- **Cache invalidation**: `SocketListener` component invalidates React Query cache on `ticket:update` events
+- **Suspense boundaries**: Proper handling of async components with `useSearchParams`
 
-- **URL as Single Source of Truth**: Selected ticket ID and filters are stored in URL query parameters
-- **Independent Data Fetching**: Both list and detail components manage their own React Query hooks
-- **Real-time Updates**: Components auto-refresh every 5 seconds to show latest AI results
-- **Optimistic Cache Invalidation**: Updates trigger refetches of both list and detail views
+### Backend
 
-This architecture enables:
+- **Express API**: RESTful endpoints for CRUD operations
+- **BullMQ + Redis**: Job queue for async AI processing with rate limiting
+- **Socket.IO Server**: Broadcasts `ticket:update` events on job completion/failure
+- **Prisma ORM**: Type-safe database access with PostgreSQL
+- **Google Gemini AI**: Ticket triage (category, urgency, sentiment, draft response)
 
-- Direct URL access to specific tickets (shareable links)
-- Browser back/forward navigation
-- Always-fresh data in detail view
-- Detail view works even if ticket isn't on current list page
+### Real-time Flow
+
+1. User creates ticket → API stores in DB → Job queued in BullMQ
+2. Worker processes job → AI analyzes ticket → Updates DB
+3. BullMQ `QueueEvents` emits `completed`/`failed` → Backend broadcasts via Socket.IO
+4. Frontend `SocketListener` receives event → Invalidates React Query cache → UI auto-updates
 
 ## Project Structure
 
-- `/backend`: Express API, Worker logic, and Scripts.
-  - `/src`: Source code.
-  - `/scripts`: Maintenance and test scripts.
-- `/frontend`: Next.js application.
-- `/docker-compose.yml`: Infrastructure orchestration.
+```
+├── backend/
+│   ├── src/
+│   │   ├── index.ts      # Express API + Socket.IO server
+│   │   ├── worker.ts     # BullMQ worker for AI processing
+│   │   ├── ai.ts         # Google Gemini integration
+│   │   └── db.ts         # Prisma client
+│   ├── scripts/          # Utility scripts (list_models.ts, etc.)
+│   └── prisma/           # Database schema and migrations
+├── frontend/
+│   └── src/
+│       ├── app/          # Next.js App Router pages
+│       ├── components/   # React components (SocketListener, etc.)
+│       ├── module/       # Feature modules (tickets hooks/services)
+│       └── lib/          # Utilities (socket.ts, httpService.ts)
+├── scripts/              # Project-level scripts (setup-env.js)
+└── docker-compose.yml    # Infrastructure orchestration
+```

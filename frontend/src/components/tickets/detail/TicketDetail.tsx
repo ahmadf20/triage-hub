@@ -23,8 +23,10 @@ type TicketDetailProps = {
 export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   const { data: ticket, isLoading, isError } = useTicket(ticketId);
 
-  const [draftEdit, setDraftEdit] = useState("");
-  if (ticket?.aiDraft && ticket.aiDraft !== draftEdit) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftEdit, setDraftEdit] = useState(ticket?.aiDraft || "");
+
+  if (ticket?.aiDraft && ticket.aiDraft !== draftEdit && !isEditing) {
     setDraftEdit(ticket.aiDraft);
   }
 
@@ -148,7 +150,10 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
           <Textarea
             className="min-h-[200px] font-mono text-sm border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-400 rounded-md"
             value={draftEdit}
-            onChange={(e) => setDraftEdit(e.target.value)}
+            onChange={(e) => {
+              setDraftEdit(e.target.value);
+              setIsEditing(true);
+            }}
             placeholder="Generating response..."
             disabled={ticket.status === "RESOLVED"}
           />
